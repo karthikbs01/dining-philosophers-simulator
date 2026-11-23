@@ -1,0 +1,78 @@
+Dining Philosophers | strict FIFO | 5 philosophers | 3 rounds | think 40 ms | eat 25 ms
+[0.00 ms] Simulation started
+[0.00 ms] P0 Thinking
+[0.00 ms] P1 Thinking
+[0.00 ms] P2 Thinking
+[0.00 ms] P3 Thinking
+[0.00 ms] P4 Thinking
+[44.48 ms] P0 Hungry, joined FIFO queue
+[44.50 ms] P0 Eating, acquired F0 and F1
+[44.52 ms] P3 Hungry, joined FIFO queue
+[44.54 ms] P4 Hungry, joined FIFO queue
+[44.61 ms] P2 Hungry, joined FIFO queue
+[44.72 ms] P1 Hungry, joined FIFO queue
+[44.86 ms] P3 Eating, acquired F3 and F4
+[79.17 ms] P3 Released F3 and F4, meal 1
+[79.17 ms] P3 Thinking
+[79.48 ms] P0 Released F0 and F1, meal 1
+[79.48 ms] P0 Thinking
+[79.72 ms] P4 Eating, acquired F4 and F0
+[79.72 ms] P2 Eating, acquired F2 and F3
+[112.69 ms] P4 Released F4 and F0, meal 1
+[112.69 ms] P4 Thinking
+[112.85 ms] P2 Released F2 and F3, meal 1
+[112.85 ms] P2 Thinking
+[113.00 ms] P1 Eating, acquired F1 and F2
+[129.32 ms] P0 Hungry, joined FIFO queue
+[129.35 ms] P3 Hungry, joined FIFO queue
+[145.51 ms] P1 Released F1 and F2, meal 1
+[145.51 ms] P1 Thinking
+[145.69 ms] P0 Eating, acquired F0 and F1
+[145.72 ms] P3 Eating, acquired F3 and F4
+[161.42 ms] P4 Hungry, joined FIFO queue
+[161.57 ms] P2 Hungry, joined FIFO queue
+[178.54 ms] P3 Released F3 and F4, meal 2
+[178.54 ms] P3 Thinking
+[178.70 ms] P0 Released F0 and F1, meal 2
+[178.70 ms] P0 Thinking
+[178.74 ms] P4 Eating, acquired F4 and F0
+[178.79 ms] P2 Eating, acquired F2 and F3
+[195.31 ms] P1 Hungry, joined FIFO queue
+[211.23 ms] P4 Released F4 and F0, meal 2
+[211.23 ms] P4 Thinking
+[211.32 ms] P2 Released F2 and F3, meal 2
+[211.32 ms] P2 Thinking
+[211.36 ms] P1 Eating, acquired F1 and F2
+[228.14 ms] P0 Hungry, joined FIFO queue
+[228.34 ms] P3 Hungry, joined FIFO queue
+[244.82 ms] P1 Released F1 and F2, meal 2
+[244.82 ms] P1 Thinking
+[244.87 ms] P0 Eating, acquired F0 and F1
+[244.94 ms] P3 Eating, acquired F3 and F4
+[261.65 ms] P4 Hungry, joined FIFO queue
+[261.73 ms] P2 Hungry, joined FIFO queue
+[278.31 ms] P3 Released F3 and F4, meal 3
+[278.31 ms] P3 Finished
+[278.48 ms] P0 Released F0 and F1, meal 3
+[278.48 ms] P0 Finished
+[278.51 ms] P4 Eating, acquired F4 and F0
+[278.53 ms] P2 Eating, acquired F2 and F3
+[294.32 ms] P1 Hungry, joined FIFO queue
+[311.06 ms] P4 Released F4 and F0, meal 3
+[311.06 ms] P4 Finished
+[311.12 ms] P2 Released F2 and F3, meal 3
+[311.12 ms] P2 Finished
+[311.15 ms] P1 Eating, acquired F1 and F2
+[345.13 ms] P1 Released F1 and F2, meal 3
+[345.13 ms] P1 Finished
+[345.13 ms] All philosophers finished
+
+Philosopher   Meals   Avg wait (ms)   Max wait (ms)
+P0               3           11.04           16.73
+P1               3           33.72           68.27
+P2               3           23.05           35.12
+P3               3           11.10           16.60
+P4               3           23.12           35.18
+Total duration: 345.13 ms
+Fork utilization: 57.75%
+Maximum simultaneous eaters: 2

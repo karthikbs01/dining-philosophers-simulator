@@ -1,0 +1,76 @@
+# Package installations, generated assets and test output
+node_modules/
+dist/
+build/
+build-*/
+cmake-build-*/
+out/
+.cache/
+.vite/
+coverage/
+test-results/
+playwright-report/
+*.tsbuildinfo
+
+# Compiled artifacts and CMake-generated build system
+*.exe
+*.o
+*.obj
+*.dll
+*.pdb
+*.a
+*.lib
+*.so
+*.dylib
+*.ilk
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+CTestTestfile.cmake
+DartConfiguration.tcl
+Testing/
+CMakeUserPresets.json
+compile_commands.json
+build.ninja
+rules.ninja
+.ninja_*
+/Makefile
+/_deps/
+
+# Local settings, credentials and keys
+.env
+.env.*
+!.env.example
+!.env.sample
+.npmrc
+*.pem
+*.key
+*.p12
+*.pfx
+credentials.json
+secrets.json
+id_rsa
+id_ed25519
+
+# Editor sessions, OS metadata, logs and scratch files
+.vs/
+.vscode/
+.idea/
+*.user
+*.suo
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+*.temp
+*.bak
+tmp/
+temp/
+
+# Local coursework reference material
+/OS Assesment Report Format.pdf
+/OS-Assignment.pdf
