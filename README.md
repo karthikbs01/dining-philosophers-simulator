@@ -1,251 +1,431 @@
-# Dining Philosophers
+<div align="center">
 
-A C++ multithreaded Dining Philosophers simulation with a React web interface, demonstrating deadlock prevention, starvation prevention, and thread synchronization.
+# 🍽️ Dining Philosophers Simulator
 
-Run the CLI to watch a timestamped trace, or use the React dashboard to pause a run and inspect the queue, fork owners and timing statistics. Both interfaces execute the same C++17 worker and resource-manager code.
+### A deadlock-free, FIFO-scheduled concurrency lab powered by C++ threads and a live React dashboard
 
-## Clone and build on Windows
+[![C++17](https://img.shields.io/badge/C%2B%2B-17-00599C?logo=c%2B%2B&logoColor=white)](https://isocpp.org/)
+[![React 19.2](https://img.shields.io/badge/React-19.2-20232A?logo=react&logoColor=61DAFB)](https://react.dev/)
+[![Vite 7.3](https://img.shields.io/badge/Vite-7.3-646CFF?logo=vite&logoColor=white)](https://vite.dev/)
+[![CMake 3.16+](https://img.shields.io/badge/CMake-3.16%2B-064F8C?logo=cmake&logoColor=white)](https://cmake.org/)
 
-Install Git for Windows, MSYS2, and Node.js 24 with npm. For the browser tests, install Google Chrome or Microsoft Edge. Open the **MSYS2 UCRT64** terminal and install the C++17 compiler, CMake and Ninja.
+One shared C++17 simulation engine drives a timestamped command-line trace and a responsive browser interface. The project demonstrates mutex-protected resource allocation, condition-variable waiting, strict FIFO admission, concurrent eating by non-adjacent philosophers, and measured synchronization statistics.
 
-~~~bash
+[Preview](#preview) · [Quick start](#quick-start) · [How it works](#how-it-works) · [Testing](#testing) · [Viva questions](#viva-questions)
+
+</div>
+
+---
+
+## Table of contents
+
+- [Preview](#preview)
+- [Features](#features)
+- [Quick start](#quick-start)
+- [How it works](#how-it-works)
+- [Architecture](#architecture)
+- [Algorithms and synchronization](#algorithms-and-synchronization)
+- [CLI demo](#cli-demo)
+- [Performance results](#performance-results)
+- [Project structure](#project-structure)
+- [Testing](#testing)
+- [Limitations](#limitations)
+- [Viva questions](#viva-questions)
+- [Contributors](#contributors)
+
+## Preview
+
+![Live Dining Philosophers dashboard paused with two eaters, owned forks, FIFO queue, controls, statistics, results, and event log](docs/images/dashboard-live.jpg)
+
+The dashboard above is connected to the real C++ simulation. P1 and P4 hold disjoint fork pairs while later requests wait in FIFO order. Pause freezes the active clock and preserves the queue and fork owners for inspection.
+
+<details>
+<summary><strong>View completed results and the final event log</strong></summary>
+
+<br>
+
+![Completed philosopher results next to the final timestamped event log](docs/images/results-and-events.jpg)
+
+</details>
+
+## Features
+
+| Capability | What it provides |
+| --- | --- |
+| Real C++ multithreading | One `std::thread` per philosopher, backed by the same engine in the CLI and website |
+| FIFO resource scheduling | Hungry philosophers enter one strict first-in, first-out request queue |
+| Atomic fork allocation | Both required forks are checked and assigned together under one mutex |
+| Efficient waiting | `std::condition_variable` blocks workers without busy-waiting |
+| Concurrent eating | Non-adjacent philosophers can eat at the same time when their fork pairs do not overlap |
+| Live React visualization | Circular table, philosopher states, fork owners, queue position, controls, and timestamped events |
+| Safe lifecycle controls | Start, Pause, Resume, and Reset use synchronized checkpoints and joined worker threads |
+| Runtime statistics | Meals, average and maximum wait, active runtime, fork utilization, and peak simultaneous eaters |
+| Standalone CLI | Configurable runs with synchronized logs and a per-philosopher summary |
+
+## Quick start
+
+### Prerequisites
+
+- Windows 10 or 11
+- [Git for Windows](https://git-scm.com/download/win)
+- [MSYS2](https://www.msys2.org/) with the UCRT64 toolchain
+- [Node.js 24](https://nodejs.org/) with npm
+- Google Chrome or Microsoft Edge for the browser integration test
+
+Open an **MSYS2 UCRT64** terminal once and install the compiler and build tools:
+
+```bash
 pacman -S --needed mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
-~~~
+```
 
-In PowerShell, clone the repository and enter its root. If you already have a checkout, open that folder instead.
+Clone the repository, then build from PowerShell. Put the UCRT64 tools first on `PATH` in each new build terminal.
 
-~~~powershell
+```powershell
 git clone https://github.com/karthikbs01/dining-philosophers-simulator.git
 Set-Location dining-philosophers-simulator
-~~~
 
-Open the repository folder in VS Code and select **Terminal → New Terminal → PowerShell**, or continue in the same shell. Put MSYS2 UCRT64 first on PATH in each new terminal used for builds and CTest. Adjust the prefix if you installed MSYS2 elsewhere.
-
-~~~powershell
 $env:Path = "C:\msys64\ucrt64\bin;$env:Path"
 cmake -S . -B build -G Ninja -DCMAKE_CXX_COMPILER=g++ -DCMAKE_BUILD_TYPE=Release
 cmake --build build
+```
+
+### Run the CLI
+
+```powershell
 .\build\dining.exe
-~~~
+# Or: .\build\dining.exe 5 3 40 25
+```
 
-**Website.** From the same terminal, build the frontend and start the backend from the project root. Open the address below. The C++ process serves both the built React files and the API. End the server with Ctrl+C.
+### Run the website
 
-~~~powershell
+Build the frontend, then start the C++ server from the repository root:
+
+```powershell
 Push-Location website\frontend
 npm.cmd ci
 npm.cmd run build
 Pop-Location
+
 .\build\dining_server.exe
-~~~
+```
 
-Open [the local simulator](http://127.0.0.1:8080/). Choose the count, rounds and timings and press **Start simulation**. Press **Pause** while someone is eating to see the two owned forks. **Resume** continues the same run. **Reset** cancels the run, releases its resources and returns to idle with the same configuration. After completion, Start launches a fresh run.
+Open **<http://127.0.0.1:8080/>**. Press `Ctrl+C` in the server terminal to stop it.
 
-**Frontend development.** Keep the C++ server running on port 8080. In a second VS Code PowerShell terminal at the repository root, run the following commands. Vite forwards `/api` to the C++ process and reloads frontend edits automatically.
+<details>
+<summary><strong>CLI arguments, direct compilation, and frontend development</strong></summary>
 
-~~~powershell
-Set-Location website\frontend
-npm.cmd run dev
-~~~
+### CLI arguments
 
-Open [the Vite development interface](http://127.0.0.1:5173/). If 8080 is occupied, reuse the running assignment server or stop it first. For a separate instance serving the built interface, pass a free port, for example `.\build\dining_server.exe 8081`.
-
-### CLI inputs
-
-~~~text
+```text
 dining [philosophers [rounds [think_ms [eat_ms]]]]
-~~~
+```
 
 | Argument | Default | Accepted whole numbers |
 | --- | ---: | ---: |
 | Philosophers | 5 | 2–10 |
 | Rounds per philosopher | 3 | 1–100 |
-| Think duration per round | 700 ms | 0–60000 ms |
-| Eat duration per round | 450 ms | 0–60000 ms |
+| Thinking duration per round | 700 ms | 0–60000 ms |
+| Eating duration per round | 450 ms | 0–60000 ms |
 
-Run `.\build\dining.exe 5 3 40 25` for a short demonstration. Zero is a valid phase duration. Invalid input prints usage and returns a nonzero exit code.
+Zero is a valid phase duration. Invalid input prints usage information and returns a nonzero exit code.
 
-The CLI also builds directly without CMake, Node or the HTTP library. In the project-root PowerShell terminal with UCRT64 first on PATH, run the following.
+The CLI can also be compiled directly with UCRT64 first on `PATH`:
 
-~~~powershell
+```powershell
 g++ -std=c++17 -O2 -pthread -static main.cpp philosopher.cpp resource_manager.cpp simulation.cpp -o dining.exe
 .\dining.exe 5 3 40 25
-~~~
+```
 
-## Assignment and objectives
+For frontend development, keep the C++ server running on port `8080`, then start Vite in a second terminal:
 
-Problem Statement 6 describes a multithreaded application sharing limited resources. Seat `i` needs both fork `i` and fork `(i + 1) % N` to eat. For five seats, P4 and P0 share F0. The objectives are exclusive fork ownership, progress for every hungry philosopher and concurrent use of disjoint fork pairs.
+```powershell
+Set-Location website\frontend
+npm.cmd run dev
+```
+
+Open **<http://127.0.0.1:5173/>**. Vite proxies `/api` to the C++ server. The backend accepts an optional port, such as `.\build\dining_server.exe 8081`, when serving a separate production build.
+
+</details>
+
+## How it works
+
+For `N` philosophers, the table contains `N` forks. Philosopher `i` needs fork `i` and fork `(i + 1) % N`. Neighboring philosophers therefore share one fork and cannot eat together.
+
+The classic deadlock appears when every philosopher holds one fork and waits for a second. This implementation never grants a partial set. A hungry philosopher joins a FIFO queue and sleeps until it is first in line **and** both forks are free. The resource manager then assigns both forks in one mutex-protected operation.
+
+```mermaid
+stateDiagram-v2
+    [*] --> Thinking
+    Thinking --> Hungry: thinking interval ends
+    Hungry --> Eating: FIFO head and both forks free
+    Eating --> Thinking: release both forks, more rounds
+    Eating --> Finished: release both forks, final round
+    Finished --> [*]
+```
+
+This removes hold-and-wait from hungry philosophers. Existing eaters already own everything needed to finish and release their pair. Later requests cannot overtake an enqueued request.
 
 ## Architecture
 
-~~~mermaid
+```mermaid
 flowchart LR
-    CLI["CLI / main.cpp"] --> S["Simulation"]
-    UI["React dashboard"] -->|HTTP controls| API["C++ HTTP server"]
-    API --> S
-    S -->|one thread per seat| W["dine() worker"]
-    W --> M["ResourceManager: mutex, condition variable, FIFO"]
-    M --> D["Fork owners, event journal, measurements"]
-    D -->|snapshot| CLI
-    D -->|snapshot| API
-    API -->|SSE| UI
-~~~
+    Browser[React dashboard] -->|HTTP controls| Server[C++ HTTP server]
+    Server --> Engine[Shared simulation engine]
+    CLI[Command-line interface] --> Engine
+    Engine --> Workers[One thread per philosopher]
+    Workers --> Manager[ResourceManager monitor]
+    Manager --> State[Fork owners · FIFO queue · event journal · statistics]
+    State --> CLI
+    State --> Server
+    Server -->|Server-Sent Events| Browser
+```
 
-~~~text
-dining-philosophers-simulator/
-  main.cpp                     CLI arguments, ordered log and summary
-  philosopher.h / .cpp         Worker loop
-  resource_manager.h / .cpp    Fork monitor, queue, timing and journal
-  simulation.h / .cpp          Thread startup, cancellation and joins
-  CMakeLists.txt               Engine library, CLI, tests and server targets
-  website/
-    backend/server.cpp         Session controller, HTTP API, SSE and static files
-    backend/vendor/            cpp-httplib header and its MIT license
-    frontend/                  Vite project, React components and plain CSS
-  tests/
-    engine_tests.cpp           Synchronization and statistics checks
-    website.test.mjs           Real browser, server and control integration
-  README.md
-  sample_output.txt            Full trace from an executed CLI run
-~~~
+The CLI and web server link the same `engine` library. The browser sends lifecycle commands to the local C++ server and receives authoritative snapshots through Server-Sent Events. JavaScript displays the simulation; it does not implement a second scheduling algorithm.
 
-The HTTP dependency is bundled at version 0.67.0. Only the backend target includes it. [cpp-httplib upstream](https://github.com/yhirose/cpp-httplib/tree/v0.67.0)
+<details>
+<summary><strong>Local HTTP and event-stream reference</strong></summary>
 
-## How one philosopher eats
+| Method and path | Behavior |
+| --- | --- |
+| `GET /api/state` | Returns configuration, generation, status, philosopher results, fork owners, queue, statistics, and the event journal |
+| `GET /api/events` | Streams state and newly recorded events using SSE |
+| `POST /api/start` | Starts an idle or completed session with `count`, `rounds`, `thinkMs`, `eatMs`, and `generation` |
+| `POST /api/pause` | Freezes the running session at synchronized checkpoints |
+| `POST /api/resume` | Continues a paused session |
+| `POST /api/reset` | Stops, wakes, joins, and replaces the current session with an idle one |
 
-~~~mermaid
+POST requests use URL-encoded fields, the current `generation`, and `X-Dining-Control: 1`. Success returns `204`, invalid input returns `400`, and stale or conflicting controls return `409`.
+
+Each SSE connection begins with the current run's journal. Sequence numbers prevent duplicate events within a generation, and a generation change replaces stale browser state. The loopback server allows up to four live viewers.
+
+</details>
+
+## Algorithms and synchronization
+
+```mermaid
 flowchart TD
-    A["Think for the configured active time"] --> B["Become hungry and enqueue once"]
-    B --> C{"Running, first in FIFO and both forks free?"}
-    C -->|No| D["Sleep on the condition variable"]
+    A[Think for the configured active time] --> B[Become Hungry and join FIFO]
+    B --> C{Running, first in FIFO,<br/>and both forks free?}
+    C -->|No| D[Sleep on condition variable]
     D -->|Wake and recheck| C
-    C -->|Yes| E["Dequeue, mark both owners, record wait, notify"]
-    E --> F["Eat while the resource mutex is available to others"]
-    F --> G["Release both forks, count meal and notify"]
-    G --> H{"All rounds completed?"}
+    C -->|Yes| E[Dequeue and assign both owners]
+    E --> F[Eat while the manager mutex is released]
+    F --> G[Release both forks and record the meal]
+    G --> H{All rounds completed?}
     H -->|No| A
-    H -->|Yes| I["Finish"]
-~~~
+    H -->|Yes| I[Finished]
+```
 
-A **thread** is an independently scheduled path through a process. Each philosopher runs the short loop in `philosopher.cpp`. A **mutex** gives one thread at a time access to the queue, owners, states and journal. The same critical section checks availability and sets both owners, so a second worker cannot act on an outdated observation.
+| Mechanism | Role in the implementation |
+| --- | --- |
+| `std::mutex` | Protects philosopher states, queue order, fork owners, events, and measurements |
+| `std::condition_variable` | Releases the mutex while workers wait for a phase deadline, a fork change, resume, or stop |
+| Atomic pair grant | Checks availability and assigns both fork owners in the same critical section |
+| FIFO queue | Prevents later hungry requests from overtaking earlier requests |
+| `std::chrono::steady_clock` | Measures active elapsed time, waiting intervals, and fork occupancy without wall-clock adjustments |
 
-A **condition variable** lets a waiting worker release the mutex and sleep. It reacquires the mutex before checking its predicate again. Granting a request wakes others because the next queue head may already have two free forks. Releasing forks, pausing, resuming and stopping also wake waiters. Timed waits implement thinking and eating and release the mutex during the delay.
+<details>
+<summary><strong>Deadlock freedom, starvation assumptions, and lifecycle synchronization</strong></summary>
 
-**Deadlock freedom.** A hungry worker holds zero forks. An eater owns both and can release both without requesting another fork. This eliminates the cycle in which everyone owns one fork and waits for a neighbor.
+### Deadlock freedom
 
-**Starvation freedom.** After a philosopher enters the FIFO queue, later requests cannot pass it. Existing eaters finish in finite time, allowing the head to acquire its pair. Applying the same argument to each earlier request eventually brings this philosopher to the head. This assumes finite phase durations, eventual scheduling of runnable threads and eventual resumption of a paused run. FIFO order starts at enqueue time. Thread launch order and seat number do not determine it.
+A hungry philosopher holds no fork. An eating philosopher holds both forks and never asks for another resource before releasing them. The circular hold-and-wait pattern cannot form.
 
-**Throughput trade-off.** Suppose P0 owns F0 and F1. P1 is first in line for F1 and F2, while P3 behind it could use free F3 and F4. Strict FIFO makes P3 wait. If P3 arrives first instead, P0 and P3 can eat together. An eligible-first allocator can improve utilization in the first case, but would need an additional fairness rule to bound overtaking.
+### Starvation freedom under documented assumptions
 
-### Pause, stop and snapshots
+Once a philosopher enters the FIFO queue, later requests cannot pass it. Existing eaters complete in finite time, allowing the queue head to acquire its pair. Repeating this reasoning for each earlier request eventually brings every enqueued philosopher to the front. This argument assumes finite phase durations, eventual CPU scheduling of runnable threads, and eventual resumption of a paused run.
 
-Pause takes the resource mutex, freezes the active clock and changes the session state before waking workers. A timed phase measures its remaining **active** time after resuming. Held forks stay with their eater. A blocked request keeps its FIFO position. Worker transitions check the session under the same mutex.
+FIFO order starts at enqueue time. Thread launch order and philosopher number do not determine admission order, and FIFO fairness does not imply identical waiting times.
 
-Reset marks the old run stopped, clears ownership and the queue, and wakes sleeping workers. The controller joins every worker before replacing that run with an idle session. A separate controller mutex orders HTTP commands. Only one run can be active, and a generation number rejects commands targeting an older run.
+### Pause, resume, reset, and snapshots
 
-Each snapshot copies the measured state and its matching event sequence under one lock. JSON serialization, network writes and CLI printing happen after that lock is released.
+Pause freezes the active clock while held forks and queue positions remain visible. Resume preserves the active time already spent in each phase. Reset marks the run stopped, clears ownership, wakes blocked workers, and joins every thread before installing a fresh idle session.
 
-## Reading the measurements
+Snapshots copy the state and matching event sequence under the manager mutex. JSON serialization, network writes, and CLI printing happen after the lock is released.
+
+</details>
+
+<details>
+<summary><strong>Statistics definitions</strong></summary>
 
 | Metric | Calculation |
 | --- | --- |
-| Meals | Increment on releasing both forks after a full eating phase |
-| Average wait | Sum of hungry-to-grant intervals divided by number of grants |
-| Maximum wait | Longest measured hungry-to-grant interval per seat |
-| Total active runtime | Monotonic elapsed time from start to final release, excluding pauses |
-| Fork utilization | 100 × total occupied fork-milliseconds / (N × active runtime in ms) |
+| Meals | Incremented after a complete eating phase releases both forks |
+| Average wait | Sum of hungry-to-grant intervals divided by grants for that philosopher |
+| Maximum wait | Longest hungry-to-grant interval for that philosopher |
+| Active runtime | Monotonic elapsed time from start to final release, excluding pauses |
+| Fork utilization | `100 × occupied fork-milliseconds / (N × active runtime in ms)` |
 | Peak eaters | Highest simultaneous eater count observed at a grant |
 
-All times come from `std::chrono::steady_clock`. A grant counts toward waiting statistics immediately. A pending request contributes once granted. A live utilization reading includes partial eating intervals. The UI samples snapshots roughly ten times per second during a run and includes every recorded transition since the previous frame. Very short meals can appear only in the journal between two visual frames.
+A live utilization snapshot includes partial eating intervals. A pending request contributes to waiting statistics when it is granted. The UI receives snapshots roughly ten times per second during an active run, while the event journal retains every transition.
 
-### Measured example
+</details>
 
-The saved run used five philosophers, three rounds, 40 ms thinking and 25 ms eating. These lines come from its trace.
+## CLI demo
 
-~~~text
+The following excerpt comes from the checked-in [`sample_output.txt`](sample_output.txt), produced with five philosophers, three rounds, 40 ms thinking, and 25 ms eating:
+
+```console
+Dining Philosophers | strict FIFO | 5 philosophers | 3 rounds | think 40 ms | eat 25 ms
+[0.00 ms] Simulation started
 [44.48 ms] P0 Hungry, joined FIFO queue
 [44.50 ms] P0 Eating, acquired F0 and F1
 ...
+[345.13 ms] All philosophers finished
+
+Philosopher   Meals   Avg wait (ms)   Max wait (ms)
+P0               3           11.04           16.73
+P1               3           33.72           68.27
+P2               3           23.05           35.12
+P3               3           11.10           16.60
+P4               3           23.12           35.18
 Total duration: 345.13 ms
 Fork utilization: 57.75%
 Maximum simultaneous eaters: 2
-~~~
+```
 
-All five finished three meals. P0 averaged 11.04 ms waiting, and P1 averaged 33.72 ms. Their enqueue times and fork conflicts differed. The sample includes the complete per-seat table and every release. [Full CLI output](sample_output.txt)
+## Performance results
 
-### Performance observations
+These are individual Windows measurements from five-round runs with 20 ms thinking and 20 ms eating. Thread scheduling and wake-up latency vary between executions, so the table is a recorded observation rather than a benchmark guarantee.
 
-Three additional Windows runs used five rounds per seat and 20 ms for both phases.
-
-| Seats | Meals completed | Active runtime | Fork utilization | Peak eaters |
+| Philosophers | Meals completed | Active runtime | Fork utilization | Peak eaters |
 | ---: | ---: | ---: | ---: | ---: |
 | 2 | 10 | 360.50 ms | 92.11% | 1 |
 | 5 | 25 | 522.89 ms | 63.64% | 2 |
 | 10 | 50 | 686.80 ms | 47.53% | 3 |
 
-At two seats, every eater uses every fork. At ten seats the physical ceiling is five simultaneous eaters. This run reached three. Thinking intervals, FIFO head blocking and OS scheduling can all leave forks idle. These are individual measurements. Repeating a command can change arrival order and timings, and OS wake-up latency can extend short phases beyond their requested durations.
+With two philosophers, every eater occupies every fork. A ten-philosopher table can physically support five eaters, while this recorded run reached three. Thinking intervals, operating-system scheduling, and strict FIFO head blocking can all leave forks idle.
 
-## Local HTTP interface
+## Project structure
 
-| Method and path | Behavior |
-| --- | --- |
-| `GET /api/state` | Current configuration, generation, status, seat results, owners, queue, statistics and full journal |
-| `GET /api/events` | SSE stream carrying the same state plus newly recorded events |
-| `POST /api/start` | Start from idle or completed with `count`, `rounds`, `thinkMs`, `eatMs` and `generation` |
-| `POST /api/pause` | Freeze the running session |
-| `POST /api/resume` | Continue the paused session |
-| `POST /api/reset` | Stop, wake, join and return to idle |
+```text
+dining-philosophers-simulator/
+├── main.cpp                       # CLI arguments, event trace, and summary
+├── philosopher.h / .cpp           # Philosopher worker loop
+├── resource_manager.h / .cpp      # Monitor, FIFO queue, forks, timing, and events
+├── simulation.h / .cpp            # Worker startup, cancellation, and joins
+├── CMakeLists.txt                  # Engine, CLI, server, tests, and TSAN option
+├── sample_output.txt               # Recorded CLI run
+├── docs/images/                    # Real dashboard screenshots used by this README
+├── tests/
+│   ├── engine_tests.cpp            # Synchronization and statistics audit
+│   └── website.test.mjs            # Browser, API, SSE, and UI integration
+└── website/
+    ├── backend/
+    │   ├── server.cpp              # Local HTTP/SSE session controller
+    │   └── vendor/                 # cpp-httplib header and MIT license
+    └── frontend/
+        ├── package.json            # React, Vite, and browser test dependencies
+        ├── vite.config.js           # Development server and API proxy
+        └── src/                    # Dashboard components, state client, and CSS
+```
 
-Send URL-encoded form fields. Every POST requires the current `generation` and header `X-Dining-Control: 1`. Success returns 204, invalid fields return 400, and stale or conflicting commands return 409. The controls operate on the shared session across browser tabs.
+## Testing
 
-An SSE connection begins with the current run’s full journal. Further packets carry a generation and a sequence number. React replaces the log after a generation change or reconnection, and appends new sequence numbers within a run. Closing a tab releases its stream and the simulation continues. The server binds to IPv4 loopback, accepts up to four live viewers, and keeps history in memory for the current run. The dashboard displays the newest 40 events initially and can reveal older entries.
+Run the engine suite from the repository root, then build and test the website:
 
-## Reproduce the tests
-
-From the project-root PowerShell terminal with the build tools on PATH, run the following. The browser suite starts an isolated backend on a free port and closes it after the test. It uses an installed Chrome. To select Edge, set `$env:BROWSER_CHANNEL = "msedge"` before running it.
-
-~~~powershell
+```powershell
+$env:Path = "C:\msys64\ucrt64\bin;$env:Path"
 cmake --build build
 ctest --test-dir build --output-on-failure
+
 Push-Location website\frontend
 npm.cmd ci
 npm.cmd run build
 npm.cmd test
 Pop-Location
-~~~
+```
 
-| Executed check | Result on this machine |
+The browser suite starts an isolated C++ backend on a free port and closes it afterward. It uses Chrome by default. Set `$env:BROWSER_CHANNEL = "msedge"` to select Edge.
+
+| Executed check | Verified result |
 | --- | --- |
-| Direct C++17 CLI build, default CLI, custom arguments and invalid count | Passed |
-| 2, 5 and 10 seats × 3, 5 and 100 rounds | All 9 combinations finished |
-| Replay every request, grant and release | FIFO, fork exclusivity, adjacency, meal totals, peak and timing calculations passed |
-| Two disjoint grants with controlled arrival order | Both fork pairs held simultaneously |
-| Pause during eating, resume, cancel while paused, invalid inputs | Passed |
-| Real Chrome → HTTP controls → C++ workers → SSE → React | Passed for reconnect, pause/reload, resume, completion, reset and concurrent Start requests |
-| Browser results and complete log compared with backend state | Passed, including fork ownership and per-seat waits |
-| Vite production build, development proxy and 360 px viewport overflow check | Passed |
+| 2, 5, and 10 philosophers × 3, 5, and 100 rounds | All nine configurations completed |
+| Full event-journal replay | FIFO order, exclusive ownership, adjacency, meals, peak eaters, and timing calculations passed |
+| Controlled non-adjacent grants | P0 and P2 held disjoint pairs simultaneously |
+| Pause, resume, reset, and invalid inputs | Lifecycle and validation checks passed |
+| Real browser → HTTP → C++ workers → SSE → React | Reconnect, pause/reload, resume, completion, reset, and concurrent Start checks passed |
+| Displayed results versus backend snapshot | Fork owners, philosopher states, waits, and complete event sequence matched |
+| Responsive layout | No horizontal overflow at a 360 px viewport |
 
-Verified with Windows, MSYS2 UCRT64 GCC 16.2.0, CMake 4.4.5, Ninja 1.13.2, Node 24.22.1 and npm 11.19.1. CTest sets a 90-second deadline for the engine suite to detect a hang.
+The verified Windows environment used MSYS2 UCRT64 GCC 16.2.0, CMake 4.4.5, Ninja 1.13.2, Node.js 24.22.1, and npm 11.19.1. CTest applies a 90-second timeout to expose non-termination.
 
-**ThreadSanitizer.** The Windows GCC link probe failed because the toolchain lacks `libtsan`. A sanitizer result is still unverified. On a Linux machine with GCC or Clang and its ThreadSanitizer runtime, use the following commands for the engine checks.
+## Limitations
 
-~~~bash
+- **FIFO can reduce throughput.** If the queue head waits for a busy pair, a later request with two free forks cannot bypass it.
+- **Fairness has assumptions.** Progress depends on finite phase durations, eventual CPU scheduling, and eventual resumption after Pause.
+- **Timing is schedule-dependent.** Short requested intervals can be extended by wake-up latency and other host activity.
+- **The server is local and single-session.** It binds to IPv4 loopback, supports one shared simulation, and limits live SSE viewers to four.
+- **The current event journal is memory-resident.** Reset starts a new generation and discards the previous run from the active interface.
+- **ThreadSanitizer is unverified on Windows.** The installed Windows compiler lacks `libtsan`.
+
+<details>
+<summary><strong>Run the optional ThreadSanitizer build on Linux</strong></summary>
+
+```bash
 cmake -S . -B build-tsan -DENABLE_TSAN=ON -DBUILD_WEBSITE=OFF -DCMAKE_BUILD_TYPE=Debug
 cmake --build build-tsan
 ctest --test-dir build-tsan --output-on-failure
-~~~
+```
+
+This command is documented for a Linux GCC or Clang toolchain with a ThreadSanitizer runtime. No passing sanitizer result is claimed for this repository.
+
+</details>
 
 ## Viva questions
 
-**Why is one fork per philosopher sufficient?** A fork sits between each neighboring pair, forming a ring. Each seat can eat only while it owns both adjacent forks.
+<details>
+<summary><strong>Why is one fork per philosopher sufficient?</strong></summary>
 
-**Why can adjacent seats never eat together?** Their fork pairs overlap at one index. The owner array has one slot for that index and every grant requires both slots to be free.
+The forks form a ring, with one fork between each neighboring pair. Philosopher `i` uses fork `i` and fork `(i + 1) % N`.
 
-**Does one resource mutex serialize all eating?** It serializes changes to ownership. Once the pair is granted, a timed condition-variable wait releases the mutex. A non-adjacent queue head can acquire its own pair during that interval.
+</details>
 
-**Why recheck after a notification?** Another worker may have changed the state before this worker regained the mutex. Condition variables can also wake spuriously.
+<details>
+<summary><strong>Why can adjacent philosophers never eat together?</strong></summary>
 
-**Can fairness guarantee equal waiting times?** FIFO prevents overtaking after enqueue. A head request can encounter busy forks, so individual waits still vary.
+Their required fork pairs overlap at one index. Each owner-array entry stores only one philosopher, and a grant requires both entries to be free.
 
-**Why use a monotonic clock?** Elapsed waiting and occupancy intervals should keep their order even when the system’s wall clock is adjusted.
+</details>
 
-**Where would you start a code walkthrough?** Read `dine()`, then trace `request()`, `acquire()` and `finishMeal()` in the resource manager. Use two consecutive grant events before either release to demonstrate simultaneous eating.
+<details>
+<summary><strong>Does one resource mutex serialize all eating?</strong></summary>
+
+It serializes short ownership decisions. Once a pair is granted, the timed condition-variable wait releases the mutex. A non-adjacent FIFO head can then acquire another free pair and eat concurrently.
+
+</details>
+
+<details>
+<summary><strong>Why recheck the predicate after a condition-variable notification?</strong></summary>
+
+Another worker may change the shared state before this worker reacquires the mutex. Condition variables may also wake spuriously, so correctness must depend on the predicate rather than the notification alone.
+
+</details>
+
+<details>
+<summary><strong>Does FIFO guarantee equal waiting times?</strong></summary>
+
+No. FIFO prevents overtaking after enqueueing. The queue head may encounter occupied forks, so requests can still experience different finite waits.
+
+</details>
+
+<details>
+<summary><strong>Why use a steady clock?</strong></summary>
+
+Waiting and utilization require monotonic elapsed intervals. `std::chrono::steady_clock` is unaffected by wall-clock corrections.
+
+</details>
+
+<details>
+<summary><strong>Where should a code walkthrough begin?</strong></summary>
+
+Start with `dine()` in [`philosopher.cpp`](philosopher.cpp), then follow `request()`, `acquire()`, and `finishMeal()` in [`resource_manager.cpp`](resource_manager.cpp). Two grant events before either corresponding release demonstrate concurrent eating.
+
+</details>
+
+## Contributors
+
+- **Karthik B Srinivas**
+- **Ayush Aditya**
+
+The backend bundles [cpp-httplib 0.67.0](https://github.com/yhirose/cpp-httplib/tree/v0.67.0). Its MIT license is preserved in [`website/backend/vendor/LICENSE`](website/backend/vendor/LICENSE). The repository does not currently declare a project-level license.
